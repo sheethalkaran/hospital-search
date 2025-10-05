@@ -695,7 +695,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildAllHospitalsTab() {
+Widget _buildAllHospitalsTab() {
     return Consumer<HospitalProvider>(
       builder: (context, provider, child) {
         if (provider.loading) {
@@ -706,14 +706,30 @@ class _HomeScreenState extends State<HomeScreen>
           return _buildEmptyState('No hospitals found');
         }
 
+        // Sort hospitals by distance if location is available
+        final hospitalsToShow = _currentPosition != null
+            ? (List<Hospital>.from(provider.filteredHospitals)
+              ..sort((a, b) {
+                final distA = a.distanceFrom(
+                  _currentPosition!.latitude,
+                  _currentPosition!.longitude,
+                );
+                final distB = b.distanceFrom(
+                  _currentPosition!.latitude,
+                  _currentPosition!.longitude,
+                );
+                return distA.compareTo(distB);
+              }))
+            : provider.filteredHospitals;
+
         return RefreshIndicator(
           onRefresh: _loadHospitals,
           color: const Color(0xFF667EEA),
           child: ListView.builder(
             padding: const EdgeInsets.all(24),
-            itemCount: provider.filteredHospitals.length,
+            itemCount: hospitalsToShow.length,
             itemBuilder: (context, index) {
-              final hospital = provider.filteredHospitals[index];
+              final hospital = hospitalsToShow[index];
               return HospitalCard(
                 hospital: hospital,
                 currentPosition: _currentPosition,
@@ -729,6 +745,19 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildSearchTab() {
     return Consumer<HospitalProvider>(
       builder: (context, provider, child) {
+        // Sort by distance if location available
+        final resultsToShow = _currentPosition != null && provider.filteredHospitals.isNotEmpty
+            ? (List<Hospital>.from(provider.filteredHospitals)
+              ..sort((a, b) {
+                if (!a.hasValidCoordinates && !b.hasValidCoordinates) return 0;
+                if (!a.hasValidCoordinates) return 1;
+                if (!b.hasValidCoordinates) return -1;
+                final distA = a.distanceFrom(_currentPosition!.latitude, _currentPosition!.longitude);
+                final distB = b.distanceFrom(_currentPosition!.latitude, _currentPosition!.longitude);
+                return distA.compareTo(distB);
+              }))
+            : provider.filteredHospitals;
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -736,9 +765,9 @@ class _HomeScreenState extends State<HomeScreen>
             children: [
               _buildFilterSection(provider),
               const SizedBox(height: 24),
-              if (provider.filteredHospitals.isNotEmpty) ...[
+              if (resultsToShow.isNotEmpty) ...[
                 Text(
-                  'Search Results (${provider.filteredHospitals.length})',
+                  'Search Results (${resultsToShow.length})',
                   style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -749,9 +778,9 @@ class _HomeScreenState extends State<HomeScreen>
                 ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: provider.filteredHospitals.length,
+                  itemCount: resultsToShow.length,
                   itemBuilder: (context, index) {
-                    final hospital = provider.filteredHospitals[index];
+                    final hospital = resultsToShow[index];
                     return HospitalCard(
                       hospital: hospital,
                       currentPosition: _currentPosition,
