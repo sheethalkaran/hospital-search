@@ -654,7 +654,7 @@ class _HospitalCardState extends State<HospitalCard>
 
   Future<void> _openMaps() async {
     final String googleMapsUrl =
-        'https://www.google.com/maps/dir/?api=1&destination=${widget.hospital.latitude},${widget.hospital.longitude}&travelmode=driving';
+'https://www.google.com/maps/dir/?api=1&destination=${widget.hospital.latitude},${widget.hospital.longitude}(${Uri.encodeComponent(widget.hospital.name)})';
 
     final Uri launchUri = Uri.parse(googleMapsUrl);
 

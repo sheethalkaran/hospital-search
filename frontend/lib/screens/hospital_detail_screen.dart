@@ -28,7 +28,7 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    
+
     _headerController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -56,9 +56,7 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
   Widget build(BuildContext context) {
     final distance = widget.currentPosition != null
         ? widget.hospital.distanceFrom(
-            widget.currentPosition!.latitude, 
-            widget.currentPosition!.longitude
-          )
+            widget.currentPosition!.latitude, widget.currentPosition!.longitude)
         : null;
 
     return Scaffold(
@@ -125,19 +123,22 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.favorite_border, color: Colors.white, size: 20),
+            child: const Icon(Icons.favorite_border,
+                color: Colors.white, size: 20),
           ),
         ),
       ],
       flexibleSpace: FlexibleSpaceBar(
-        title: _isHeaderExpanded ? null : Text(
-          widget.hospital.name,
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-            color: Colors.white,
-          ),
-        ),
+        title: _isHeaderExpanded
+            ? null
+            : Text(
+                widget.hospital.name,
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
         background: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -166,7 +167,8 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
@@ -183,7 +185,8 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
                       if (distance != null) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: const Color(0xFF059669),
                             borderRadius: BorderRadius.circular(12),
@@ -221,7 +224,7 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
               onTap: () => _makePhoneCall(widget.hospital.telephone),
             ),
           ),
-        if (widget.hospital.telephone.isNotEmpty && 
+        if (widget.hospital.telephone.isNotEmpty &&
             widget.hospital.emergencyNum.isNotEmpty)
           const SizedBox(width: 12),
         if (widget.hospital.emergencyNum.isNotEmpty)
@@ -308,10 +311,15 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
           ),
           const SizedBox(height: 16),
           _buildInfoRow('Address', widget.hospital.address, Icons.location_on),
-          _buildInfoRow('Location', '${widget.hospital.district}, ${widget.hospital.state}', Icons.map),
-          _buildInfoRow('Pincode', widget.hospital.pincode, Icons.local_post_office),
+          _buildInfoRow(
+              'Location',
+              '${widget.hospital.district}, ${widget.hospital.state}',
+              Icons.map),
+          _buildInfoRow(
+              'Pincode', widget.hospital.pincode, Icons.local_post_office),
           if (widget.hospital.discipline.isNotEmpty)
-            _buildInfoRow('Medical System', widget.hospital.discipline, Icons.medical_services),
+            _buildInfoRow('Medical System', widget.hospital.discipline,
+                Icons.medical_services),
         ],
       ),
     );
@@ -344,13 +352,20 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
           ),
           const SizedBox(height: 16),
           if (widget.hospital.telephone.isNotEmpty)
-            _buildContactItem('Phone', widget.hospital.telephone, Icons.phone, () => _makePhoneCall(widget.hospital.telephone)),
+            _buildContactItem('Phone', widget.hospital.telephone, Icons.phone,
+                () => _makePhoneCall(widget.hospital.telephone)),
           if (widget.hospital.emergencyNum.isNotEmpty)
-            _buildContactItem('Emergency', widget.hospital.emergencyNum, Icons.emergency, () => _makePhoneCall(widget.hospital.emergencyNum)),
+            _buildContactItem(
+                'Emergency',
+                widget.hospital.emergencyNum,
+                Icons.emergency,
+                () => _makePhoneCall(widget.hospital.emergencyNum)),
           if (widget.hospital.email.isNotEmpty)
-            _buildContactItem('Email', widget.hospital.email, Icons.email, () => _sendEmail(widget.hospital.email)),
+            _buildContactItem('Email', widget.hospital.email, Icons.email,
+                () => _sendEmail(widget.hospital.email)),
           if (widget.hospital.website.isNotEmpty)
-            _buildContactItem('Website', widget.hospital.website, Icons.language, () => _openWebsite(widget.hospital.website)),
+            _buildContactItem('Website', widget.hospital.website,
+                Icons.language, () => _openWebsite(widget.hospital.website)),
         ],
       ),
     );
@@ -396,7 +411,9 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
                 child: _buildStatCard(
                   'Available',
                   widget.hospital.availableBeds.toString(),
-                  widget.hospital.availableBeds > 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                  widget.hospital.availableBeds > 0
+                      ? const Color(0xFF059669)
+                      : const Color(0xFFDC2626),
                 ),
               ),
               const SizedBox(width: 12),
@@ -445,7 +462,8 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
             runSpacing: 8,
             children: widget.hospital.specialties.map((specialty) {
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: const Color(0xFF2563EB).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -527,7 +545,7 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
 
   Widget _buildInfoRow(String label, String value, IconData icon) {
     if (value.isEmpty) return const SizedBox.shrink();
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -565,7 +583,8 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
     );
   }
 
-  Widget _buildContactItem(String label, String value, IconData icon, VoidCallback onTap) {
+  Widget _buildContactItem(
+      String label, String value, IconData icon, VoidCallback onTap) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -601,7 +620,8 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, size: 12, color: const Color(0xFF6B7280)),
+              Icon(Icons.arrow_forward_ios,
+                  size: 12, color: const Color(0xFF6B7280)),
             ],
           ),
         ),
@@ -659,7 +679,6 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
             ),
             backgroundColor: const Color(0xFF2563EB),
           ),
-        
         if (widget.hospital.emergencyNum.isNotEmpty) ...[
           const SizedBox(height: 16),
           FloatingActionButton(
@@ -700,7 +719,7 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = 'https://$url';
     }
-    
+
     final Uri launchUri = Uri.parse(url);
     try {
       if (await canLaunchUrl(launchUri)) {
@@ -712,9 +731,9 @@ class _HospitalDetailScreenState extends State<HospitalDetailScreen>
   }
 
   Future<void> _openMaps() async {
-    final String googleMapsUrl = 
-        'https://www.google.com/maps/dir/?api=1&destination=${widget.hospital.latitude},${widget.hospital.longitude}';
-    
+    final String googleMapsUrl =
+        'https://www.google.com/maps/dir/?api=1&destination=${widget.hospital.latitude},${widget.hospital.longitude}(${Uri.encodeComponent(widget.hospital.name)})';
+
     final Uri launchUri = Uri.parse(googleMapsUrl);
     try {
       if (await canLaunchUrl(launchUri)) {
