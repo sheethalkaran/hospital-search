@@ -1,45 +1,77 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+# Environment Files
+.env
+*.env
+.env.local
+.env.development
+.env.test
+.env.production
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
+# API Keys and Secrets
+*/config/keys.js
+*/config/secrets.js
+**/apiKeys.js
+**/credentials.json
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Dependencies
+/node_modules
+**/node_modules
+.pub-cache/
+.pub/
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# Flutter/Dart specific
+**/build/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
-.pub/
-/build/
+*.lock
+*.g.dart
 
-# Symbolication related
-app.*.symbols
+# IDE specific
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
 
-# Obfuscation related
-app.*.map.json
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Database
+*.sqlite
+*.db
+
+# Compiled output
+/dist
+/tmp
+/out-tsc
+/build
+/debug
+/release
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# URLs and Endpoints
+**/urls.config.js
+**/endpoints.js
+**/api-config.js
+**/server-urls.js
+
+# Generated files
+*.generated.dart
+*.freezed.dart
+*.g.dart
+*.mocks.dart
+
+# Local configuration
+local.properties
+google-services.json
+GoogleService-Info.plist
