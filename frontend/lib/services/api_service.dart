@@ -66,7 +66,8 @@ class ApiService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-      ).timeout(const Duration(seconds: 30)); // Increased timeout for large datasets
+      ).timeout(
+          const Duration(seconds: 30)); // Increased timeout for large datasets
 
       print('📈 Response status: ${response.statusCode}');
 
@@ -223,7 +224,7 @@ class ApiService {
       final queryString = queryParams.join('&');
       final url = '$baseUrl/hospitals/search?$queryString';
 
-      print('🔍 Searching hospitals: $url');
+      // Removed verbose print statement to prevent UI hangs
 
       final response = await http.get(
         Uri.parse(url),
@@ -247,7 +248,7 @@ class ApiService {
           throw Exception('Unexpected response format');
         }
 
-        print('🔍 Search returned ${data.length} hospitals');
+        // Removed verbose print statement to prevent excessive logging
         return data.map((json) => Hospital.fromJson(json)).toList();
       } else {
         throw Exception(
@@ -265,7 +266,7 @@ class ApiService {
       final baseUrl = await _getWorkingBaseUrl();
       final url = '$baseUrl/hospitals/$id';
 
-      print('📡 Fetching hospital details: $url');
+      // Removed verbose print statement to prevent excessive logging
 
       final response = await http.get(
         Uri.parse(url),

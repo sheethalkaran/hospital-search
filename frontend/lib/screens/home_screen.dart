@@ -15,8 +15,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> 
-    with TickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   Position? _currentPosition;
   bool _locationLoading = false;
@@ -26,18 +25,24 @@ class _HomeScreenState extends State<HomeScreen>
   late Animation<double> _headerSlideAnimation;
   late Animation<double> _headerFadeAnimation;
   late Animation<double> _statsScaleAnimation;
+  
+  // Cache sorted results
+  List<Hospital>? _cachedSearchResults;
+  String _lastSearchQuery = '';
+  String _lastSelectedState = '';
+  String _lastSelectedDistrict = '';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    
+
     // Initialize animation controllers
     _headerAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    
+
     _statsAnimationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -99,9 +104,8 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       final hospitals = await ApiService.getAllHospitals();
       provider.setHospitals(hospitals);
-      print('Loaded ${hospitals.length} hospitals');
+      _cachedSearchResults = null; // Clear cache when data changes
     } catch (e) {
-      print('Error loading hospitals: $e');
       _showErrorSnackBar('Failed to load hospitals: ${e.toString()}');
     }
 
@@ -143,9 +147,9 @@ class _HomeScreenState extends State<HomeScreen>
       setState(() {
         _currentPosition = position;
         _locationLoading = false;
+        _cachedSearchResults = null; // Clear cache when location changes
       });
     } catch (e) {
-      print('Location error: $e');
       _showErrorSnackBar('Failed to get location: ${e.toString()}');
       setState(() => _locationLoading = false);
     }
@@ -191,6 +195,40 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       );
     }
+  }
+
+  // Memoized sorting function
+  List<Hospital> _getSortedSearchResults(HospitalProvider provider) {
+    // Check if we can use cached results
+    if (_cachedSearchResults != null &&
+        _lastSearchQuery == provider.searchQuery &&
+        _lastSelectedState == provider.selectedState &&
+        _lastSelectedDistrict == provider.selectedDistrict) {
+      return _cachedSearchResults!;
+    }
+
+    // Update cache keys
+    _lastSearchQuery = provider.searchQuery;
+    _lastSelectedState = provider.selectedState;
+    _lastSelectedDistrict = provider.selectedDistrict;
+
+    // Perform sorting
+    final results = _currentPosition != null && provider.filteredHospitals.isNotEmpty
+        ? (List<Hospital>.from(provider.filteredHospitals)
+          ..sort((a, b) {
+            if (!a.hasValidCoordinates && !b.hasValidCoordinates) return 0;
+            if (!a.hasValidCoordinates) return 1;
+            if (!b.hasValidCoordinates) return -1;
+            final distA = a.distanceFrom(
+                _currentPosition!.latitude, _currentPosition!.longitude);
+            final distB = b.distanceFrom(
+                _currentPosition!.latitude, _currentPosition!.longitude);
+            return distA.compareTo(distB);
+          }))
+        : provider.filteredHospitals;
+
+    _cachedSearchResults = results;
+    return results;
   }
 
   @override
@@ -260,7 +298,6 @@ class _HomeScreenState extends State<HomeScreen>
               padding: const EdgeInsets.all(24),
               child: Row(
                 children: [
-                  // Animated Logo Container
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -291,8 +328,6 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   const SizedBox(width: 20),
-                  
-                  // Title Section
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,8 +354,6 @@ class _HomeScreenState extends State<HomeScreen>
                       ],
                     ),
                   ),
-                  
-                  // GPS Status Indicator
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -395,6 +428,7 @@ class _HomeScreenState extends State<HomeScreen>
           onChanged: (value) {
             Provider.of<HospitalProvider>(context, listen: false)
                 .setSearchQuery(value);
+            _cachedSearchResults = null; // Clear cache on search change
           },
           decoration: InputDecoration(
             hintText: 'Search hospitals, specialties, locations...',
@@ -426,6 +460,7 @@ class _HomeScreenState extends State<HomeScreen>
                       _searchController.clear();
                       Provider.of<HospitalProvider>(context, listen: false)
                           .setSearchQuery('');
+                      _cachedSearchResults = null;
                     },
                   )
                 : Container(
@@ -453,129 +488,6 @@ class _HomeScreenState extends State<HomeScreen>
               vertical: 20,
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatsOverview() {
-    return AnimatedBuilder(
-      animation: _statsAnimationController,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _statsScaleAnimation.value,
-          child: Container(
-            margin: const EdgeInsets.all(24),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Consumer<HospitalProvider>(
-              builder: (context, provider, child) {
-                final totalHospitals = provider.hospitals.length;
-                final availableBeds = provider.hospitals
-                    .fold(0, (sum, hospital) => sum + hospital.availableBeds);
-                final nearbyCount = _currentPosition != null
-                    ? provider
-                        .getNearbyHospitals(
-                          _currentPosition!.latitude,
-                          _currentPosition!.longitude,
-                        )
-                        .length
-                    : 0;
-
-                return Row(
-                  children: [
-                    _buildStatCard(
-                      icon: Icons.local_hospital_rounded,
-                      label: 'Total Hospitals',
-                      value: totalHospitals.toString(),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF10B981), Color(0xFF059669)],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    _buildStatCard(
-                      icon: Icons.bed_rounded,
-                      label: 'Available Beds',
-                      value: availableBeds.toString(),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    _buildStatCard(
-                      icon: Icons.near_me_rounded,
-                      label: 'Nearby',
-                      value: nearbyCount.toString(),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Gradient gradient,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: Colors.white, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: Colors.white.withOpacity(0.8),
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
         ),
       ),
     );
@@ -695,7 +607,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-Widget _buildAllHospitalsTab() {
+  Widget _buildAllHospitalsTab() {
     return Consumer<HospitalProvider>(
       builder: (context, provider, child) {
         if (provider.loading) {
@@ -706,7 +618,6 @@ Widget _buildAllHospitalsTab() {
           return _buildEmptyState('No hospitals found');
         }
 
-        // Sort hospitals by distance if location is available
         final hospitalsToShow = _currentPosition != null
             ? (List<Hospital>.from(provider.filteredHospitals)
               ..sort((a, b) {
@@ -745,58 +656,59 @@ Widget _buildAllHospitalsTab() {
   Widget _buildSearchTab() {
     return Consumer<HospitalProvider>(
       builder: (context, provider, child) {
-        // Sort by distance if location available
-        final resultsToShow = _currentPosition != null && provider.filteredHospitals.isNotEmpty
-            ? (List<Hospital>.from(provider.filteredHospitals)
-              ..sort((a, b) {
-                if (!a.hasValidCoordinates && !b.hasValidCoordinates) return 0;
-                if (!a.hasValidCoordinates) return 1;
-                if (!b.hasValidCoordinates) return -1;
-                final distA = a.distanceFrom(_currentPosition!.latitude, _currentPosition!.longitude);
-                final distB = b.distanceFrom(_currentPosition!.latitude, _currentPosition!.longitude);
-                return distA.compareTo(distB);
-              }))
-            : provider.filteredHospitals;
+        // Use memoized sorting
+        final resultsToShow = _getSortedSearchResults(provider);
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildFilterSection(provider),
-              const SizedBox(height: 24),
-              if (resultsToShow.isNotEmpty) ...[
-                Text(
-                  'Search Results (${resultsToShow.length})',
-                  style: GoogleFonts.inter(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1E293B),
+        return CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: _buildFilterSection(provider),
+              ),
+            ),
+            if (resultsToShow.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                  child: Text(
+                    'Search Results (${resultsToShow.length})',
+                    style: GoogleFonts.inter(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1E293B),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: resultsToShow.length,
-                  itemBuilder: (context, index) {
-                    final hospital = resultsToShow[index];
-                    return HospitalCard(
-                      hospital: hospital,
-                      currentPosition: _currentPosition,
-                      onTap: () => _navigateToDetail(hospital),
-                    );
-                  },
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final hospital = resultsToShow[index];
+                      return HospitalCard(
+                        hospital: hospital,
+                        currentPosition: _currentPosition,
+                        onTap: () => _navigateToDetail(hospital),
+                      );
+                    },
+                    childCount: resultsToShow.length,
+                  ),
                 ),
-              ] else if (provider.searchQuery.isNotEmpty ||
-                  provider.selectedState.isNotEmpty ||
-                  provider.selectedDistrict.isNotEmpty) ...[
-                _buildEmptyState('No hospitals match your search criteria'),
-              ] else ...[
-                _buildSearchPrompt(),
-              ],
+              ),
+            ] else if (provider.searchQuery.isNotEmpty ||
+                provider.selectedState.isNotEmpty ||
+                provider.selectedDistrict.isNotEmpty) ...[
+              SliverFillRemaining(
+                child: _buildEmptyState('No hospitals match your search criteria'),
+              ),
+            ] else ...[
+              SliverFillRemaining(
+                child: _buildSearchPrompt(),
+              ),
             ],
-          ),
+          ],
         );
       },
     );
@@ -848,8 +760,6 @@ Widget _buildAllHospitalsTab() {
               ],
             ),
             const SizedBox(height: 24),
-
-            // State Dropdown
             DropdownButtonFormField<String>(
               value: provider.selectedState.isEmpty
                   ? null
@@ -866,7 +776,8 @@ Widget _buildAllHospitalsTab() {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: Color(0xFF667EEA), width: 2),
+                  borderSide:
+                      const BorderSide(color: Color(0xFF667EEA), width: 2),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -886,12 +797,10 @@ Widget _buildAllHospitalsTab() {
               }).toList(),
               onChanged: (value) {
                 provider.setSelectedState(value ?? '');
+                _cachedSearchResults = null; // Clear cache
               },
             ),
-
             const SizedBox(height: 20),
-
-            // District Dropdown
             DropdownButtonFormField<String>(
               value: provider.selectedDistrict.isEmpty
                   ? null
@@ -908,7 +817,8 @@ Widget _buildAllHospitalsTab() {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: Color(0xFF667EEA), width: 2),
+                  borderSide:
+                      const BorderSide(color: Color(0xFF667EEA), width: 2),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -929,12 +839,10 @@ Widget _buildAllHospitalsTab() {
               }).toList(),
               onChanged: (value) {
                 provider.setSelectedDistrict(value ?? '');
+                _cachedSearchResults = null; // Clear cache
               },
             ),
-
             const SizedBox(height: 20),
-
-            // Clear Filters Button
             if (provider.selectedState.isNotEmpty ||
                 provider.selectedDistrict.isNotEmpty)
               Container(
@@ -948,8 +856,10 @@ Widget _buildAllHospitalsTab() {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     provider.clearFilters();
+                    _cachedSearchResults = null; // Clear cache
                   },
-                  icon: const Icon(Icons.clear_all_rounded, color: Colors.white),
+                  icon:
+                      const Icon(Icons.clear_all_rounded, color: Colors.white),
                   label: Text(
                     'Clear All Filters',
                     style: GoogleFonts.inter(
@@ -1061,10 +971,10 @@ Widget _buildAllHospitalsTab() {
                     ),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.search_off_rounded,
                     size: 48,
-                    color: const Color(0xFF64748B),
+                    color: Color(0xFF64748B),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -1171,10 +1081,12 @@ Widget _buildAllHospitalsTab() {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : const Icon(Icons.my_location_rounded, color: Colors.white),
+                    : const Icon(Icons.my_location_rounded,
+                        color: Colors.white),
                 label: Text(
                   _locationLoading ? 'Getting Location...' : 'Enable Location',
                   style: GoogleFonts.inter(
@@ -1268,9 +1180,9 @@ Widget _buildAllHospitalsTab() {
                     ),
                     child: Column(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.location_city_rounded,
-                          color: const Color(0xFF667EEA),
+                          color: Color(0xFF667EEA),
                           size: 24,
                         ),
                         const SizedBox(height: 8),
@@ -1300,9 +1212,9 @@ Widget _buildAllHospitalsTab() {
                     ),
                     child: Column(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.medical_services_rounded,
-                          color: const Color(0xFF667EEA),
+                          color: Color(0xFF667EEA),
                           size: 24,
                         ),
                         const SizedBox(height: 8),
@@ -1332,9 +1244,9 @@ Widget _buildAllHospitalsTab() {
                     ),
                     child: Column(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.business_rounded,
-                          color: const Color(0xFF667EEA),
+                          color: Color(0xFF667EEA),
                           size: 24,
                         ),
                         const SizedBox(height: 8),
