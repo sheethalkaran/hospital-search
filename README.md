@@ -14,18 +14,28 @@ A full-stack application to help users find hospitals nearby or search for hospi
 - **Frontend:** Flutter (Android, iOS, Web, Desktop)
 - **Data:** hospitals.xlsv (imported to MongoDB)
 
+
 ## Project Structure
-├── backend/
-│   ├── .env                 # Backend environment configuration
-│   ├── package.json         # Backend dependencies and scripts
-│   ├── server.js           # Main backend server file
-│   ├── data/
-│   │   └── hospitals.xlsx   # Hospital data 
-│   └── scripts/
-│       └── importData.js    # Data import script
+```
+hospital-finder/
 │
-└── frontend/               # Flutter frontend application
-    ├── lib/               # Flutter source code
-    ├── test/             # Frontend tests
-    ├── pubspec.yaml      # Flutter dependencies
-    └── README.md         # Frontend documentation
+├── backend/
+│   ├── .env                    # Backend environment configuration
+│   ├── package.json           # Backend dependencies and scripts
+│   ├── server.js              # Main backend server file
+│   ├── data/
+│   │   └── hospitals.xlsx     # Hospital data 
+│   └── scripts/
+│       └── importData.js      # Data import script
+│
+└── frontend/
+    ├── lib/                   # Flutter source code
+    │   ├── main.dart         # Entry point
+    │   ├── screens/          # UI screens
+    │   ├── models/           # Data models
+    │   ├── services/         # API services
+    │   └── widgets/          # Reusable widgets
+    ├── test/                 # Frontend tests
+    ├── pubspec.yaml          # Flutter dependencies
+    └── README.md             # Frontend documentation
+```
