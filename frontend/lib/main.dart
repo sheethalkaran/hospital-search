@@ -87,40 +87,62 @@ class HospitalProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setSearchQuery(String query) {
-    _searchQuery = query;
-    _filterHospitals();
+void setSearchQuery(String query) {
+  if (_searchQuery == query) return; // Avoid unnecessary updates
+  _searchQuery = query;
+  _filterHospitals();
+  // Debounce notifications for search
+  WidgetsBinding.instance.addPostFrameCallback((_) {
     notifyListeners();
-  }
+  });
+}
 
-  void setSelectedState(String state) {
-    _selectedState = state;
-    _selectedDistrict = '';
-    _filterHospitals();
+void setSelectedState(String state) {
+  if (_selectedState == state) return; // Avoid unnecessary updates
+  _selectedState = state;
+  _selectedDistrict = '';
+  _filterHospitals();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
     notifyListeners();
-  }
+  });
+}
 
-  void setSelectedDistrict(String district) {
-    _selectedDistrict = district;
-    _filterHospitals();
+void setSelectedDistrict(String district) {
+  if (_selectedDistrict == district) return; // Avoid unnecessary updates
+  _selectedDistrict = district;
+  _filterHospitals();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
     notifyListeners();
-  }
+  });
+}
 
-  void _filterHospitals() {
-    _filteredHospitals = _hospitals.where((hospital) {
-      bool matchesSearch = _searchQuery.isEmpty ||
-          hospital.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          hospital.address.toLowerCase().contains(_searchQuery.toLowerCase());
+void _filterHospitals() {
+  // Use more efficient filtering without unnecessary list copies
+  final query = _searchQuery.toLowerCase();
+  final state = _selectedState.toLowerCase();
+  final district = _selectedDistrict.toLowerCase();
+  
+  _filteredHospitals = _hospitals.where((hospital) {
+    // Short-circuit evaluation for better performance
+    if (_selectedState.isNotEmpty && 
+        hospital.state.toLowerCase() != state) {
+      return false;
+    }
 
-      bool matchesState = _selectedState.isEmpty ||
-          hospital.state.toLowerCase() == _selectedState.toLowerCase();
+    if (_selectedDistrict.isNotEmpty && 
+        hospital.district.toLowerCase() != district) {
+      return false;
+    }
 
-      bool matchesDistrict = _selectedDistrict.isEmpty ||
-          hospital.district.toLowerCase() == _selectedDistrict.toLowerCase();
+    if (_searchQuery.isNotEmpty) {
+      final nameMatch = hospital.name.toLowerCase().contains(query);
+      final addressMatch = hospital.address.toLowerCase().contains(query);
+      return nameMatch || addressMatch;
+    }
 
-      return matchesSearch && matchesState && matchesDistrict;
-    }).toList();
-  }
+    return true;
+  }).toList();
+}
 
   void clearFilters() {
     _selectedState = '';

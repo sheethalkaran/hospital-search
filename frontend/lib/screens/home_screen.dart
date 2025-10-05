@@ -25,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late Animation<double> _headerSlideAnimation;
   late Animation<double> _headerFadeAnimation;
   late Animation<double> _statsScaleAnimation;
+  
 
   @override
   void initState() {
@@ -741,34 +742,54 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildSearchTab() {
+Widget _buildSearchTab() {
     return Consumer<HospitalProvider>(
       builder: (context, provider, child) {
-        // Sort by distance if location available
-        final resultsToShow = _currentPosition != null &&
-                provider.filteredHospitals.isNotEmpty
-            ? (List<Hospital>.from(provider.filteredHospitals)
-              ..sort((a, b) {
-                if (!a.hasValidCoordinates && !b.hasValidCoordinates) return 0;
-                if (!a.hasValidCoordinates) return 1;
-                if (!b.hasValidCoordinates) return -1;
-                final distA = a.distanceFrom(
-                    _currentPosition!.latitude, _currentPosition!.longitude);
-                final distB = b.distanceFrom(
-                    _currentPosition!.latitude, _currentPosition!.longitude);
-                return distA.compareTo(distB);
-              }))
-            : provider.filteredHospitals;
+        // Memoize sorted results to avoid recalculating on every rebuild
+        final resultsToShow = provider.filteredHospitals;
+        final hasActiveFilters = provider.searchQuery.isNotEmpty ||
+            provider.selectedState.isNotEmpty ||
+            provider.selectedDistrict.isNotEmpty;
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildFilterSection(provider),
-              const SizedBox(height: 24),
-              if (resultsToShow.isNotEmpty) ...[
-                Text(
+        if (resultsToShow.isEmpty && !hasActiveFilters) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                _buildFilterSection(provider),
+                const SizedBox(height: 24),
+                _buildSearchPrompt(),
+              ],
+            ),
+          );
+        }
+
+        if (resultsToShow.isEmpty && hasActiveFilters) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                _buildFilterSection(provider),
+                const SizedBox(height: 24),
+                _buildEmptyState('No hospitals match your search criteria'),
+              ],
+            ),
+          );
+        }
+
+        // Use CustomScrollView with Slivers for better performance
+        return CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: _buildFilterSection(provider),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                child: Text(
                   'Search Results (${resultsToShow.length})',
                   style: GoogleFonts.inter(
                     fontSize: 22,
@@ -776,12 +797,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     color: const Color(0xFF1E293B),
                   ),
                 ),
-                const SizedBox(height: 20),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: resultsToShow.length,
-                  itemBuilder: (context, index) {
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
                     final hospital = resultsToShow[index];
                     return HospitalCard(
                       hospital: hospital,
@@ -789,16 +811,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       onTap: () => _navigateToDetail(hospital),
                     );
                   },
+                  childCount: resultsToShow.length,
                 ),
-              ] else if (provider.searchQuery.isNotEmpty ||
-                  provider.selectedState.isNotEmpty ||
-                  provider.selectedDistrict.isNotEmpty) ...[
-                _buildEmptyState('No hospitals match your search criteria'),
-              ] else ...[
-                _buildSearchPrompt(),
-              ],
-            ],
-          ),
+              ),
+            ),
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 24),
+            ),
+          ],
         );
       },
     );
